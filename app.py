@@ -40,7 +40,7 @@ class VideoProcessor:
     def recv(self, frame):
         img = frame.to_ndarray(format="bgr24")
         #img = cv2.cvtColor(cv2.Canny(img, 100, 200), cv2.COLOR_GRAY2BGR)  # エッジ検出
-        img = self.landmark(img)
+        img = self.landmark(img)  # mediapipeでのランドマーク検出
         return av.VideoFrame.from_ndarray(img, format="bgr24")
 
 
