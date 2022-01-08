@@ -3,10 +3,9 @@ import streamlit as st
 from streamlit_webrtc import webrtc_streamer
 import cv2
 import av
-#from PIL import Image
 import numpy as np
-#import pandas as pd
 import tensorflow as tf
+import time
 
 # 参考
 # streamlit https://zenn.dev/whitphx/articles/streamlit-realtime-cv-app
@@ -105,7 +104,7 @@ def pose(results, annotated_image, label, csv):
         mp_drawing.draw_landmarks(
             image=annotated_image,
             landmark_list=results.pose_landmarks,
-            connections=mp_holistic.HAND_CONNECTIONS)
+            connections=mp_holistic.POSE_CONNECTIONS)
 
         for index, landmark in enumerate(results.pose_landmarks.landmark):
             label.append("pose_"+str(index) + "_x")
@@ -132,9 +131,9 @@ def landmark(image):
     label = []
     csv = []
 
-    #label, csv = face(results, annotated_image, csv, label)
+    #label, csv = face(results, annotated_image, label, csv)
     label, csv = r_hand(results, annotated_image, label, csv)
-    #label, csv = l_hand(results, annotated_image, csv, label)
+    #label, csv = l_hand(results, annotated_image, label, csv)
     label, csv = pose(results, annotated_image, label, csv)
 
     # 全フレームのランドマークを結合する
@@ -146,7 +145,8 @@ def landmark(image):
         array_landmark = np.nan_to_num(array_landmark, nan=0.1)
 
         pred = model.predict(array_landmark[None, ...])
-        print(pred.argmax())
+        print("##############sign"+str(pred.argmax()+1) +
+              "___である確率は"+str(pred.max()*100)+"％##############")
 
     return annotated_image
 
