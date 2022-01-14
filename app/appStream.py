@@ -124,16 +124,16 @@ def pose(results, annotated_image, label, csv):
 
 
 # mediapipeでランドマークを出力する
-def landmark(image):
+def landmark(image, pred):
     results = holistic.process(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
     annotated_image = image.copy()
 
     label = []
     csv = []
 
-    #label, csv = face(results, annotated_image, label, csv)
+    # label, csv = face(results, annotated_image, label, csv)
     label, csv = r_hand(results, annotated_image, label, csv)
-    #label, csv = l_hand(results, annotated_image, label, csv)
+    # label, csv = l_hand(results, annotated_image, label, csv)
     label, csv = pose(results, annotated_image, label, csv)
 
     # 全フレームのランドマークを結合する
@@ -145,22 +145,35 @@ def landmark(image):
         array_landmark = np.nan_to_num(array_landmark, nan=0.1)
 
         pred = model.predict(array_landmark[None, ...])
-        print("##############sign"+str(pred.argmax()+1) +
-              "___である確率は"+str(pred.max()*100)+"％##############")
 
-    return annotated_image
+        # print("###################")
+        # print("sign"+str(pred.argmax()+1) + "である確率は" +
+        #       str(int(pred.max()*100))+"％")
+        # print("###################")
+
+    return annotated_image, pred
 
 
 class VideoProcessor:
+    def __init__(self):
+        self.pred = np.zeros(20)
+
     def recv(self, frame):
         img = frame.to_ndarray(format="bgr24")
-        img = landmark(img)  # mediapipeでのランドマーク検出
+        img, self.pred = landmark(img, self.pred)  # mediapipeでのランドマーク検出
 
         return av.VideoFrame.from_ndarray(img, format="bgr24")
 
 
 st.title("リアルタイム手話認識")
-
 multi_landmarks = [[]]
 model = tf.keras.models.load_model('LSTM.hdf5')
-webrtc_streamer(key="example", video_processor_factory=VideoProcessor)
+
+ctx = webrtc_streamer(key="example", video_processor_factory=VideoProcessor)
+
+# frame=videoprocessorしてみる？
+if ctx.video_processor:
+    prediction = ctx.video_processor.pred
+    st.write("sign"+str(prediction.argmax()+1) +
+             "である確率は"+str(int(prediction.max()*100))+"％")
+    time.sleep(2)
