@@ -155,7 +155,7 @@ def landmark(image, pred):
 
 
 class VideoProcessor:
-    def __init__(self):
+    def __init__(self) -> None:
         self.pred = np.zeros(20)
 
     def recv(self, frame):
@@ -166,14 +166,14 @@ class VideoProcessor:
 
 
 st.title("リアルタイム手話認識")
+
 multi_landmarks = [[]]
-model = tf.keras.models.load_model('LSTM.hdf5')
+model = tf.keras.models.load_model('weight.hdf5')
 
 ctx = webrtc_streamer(key="example", video_processor_factory=VideoProcessor)
 
 # frame=videoprocessorしてみる？
 if ctx.video_processor:
-    prediction = ctx.video_processor.pred
-    st.write("sign"+str(prediction.argmax()+1) +
-             "である確率は"+str(int(prediction.max()*100))+"％")
-    time.sleep(2)
+    pred = ctx.video_processor.pred
+    st.write("sign"+str(pred.argmax()+1) +
+             "である確率は"+str(int(pred.max()*100))+"％")

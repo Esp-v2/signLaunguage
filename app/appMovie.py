@@ -2,14 +2,9 @@ import mediapipe as mp
 import streamlit as st
 from streamlit_webrtc import webrtc_streamer
 import cv2
-import av
 import numpy as np
 import tensorflow as tf
-import time
-
-# 参考
-# streamlit https://zenn.dev/whitphx/articles/streamlit-realtime-cv-app
-###
+from PIL import Image
 
 
 # mediapipe初期設定
@@ -72,7 +67,7 @@ def pose(results, annotated_image, label, csv):
 
 
 # mediapipeでランドマークを出力する
-def landmark(image, pred):
+def landmark(image, multi_landmarks):
     results = holistic.process(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
     annotated_image = image.copy()
 
@@ -84,6 +79,44 @@ def landmark(image, pred):
 
     # 全フレームのランドマークを結合する
     multi_landmarks.append(csv)
+    return annotated_image, multi_landmarks
+
+
+base_dir = "/Users/shu/Desktop/"
+
+#multi_landmarks = [[]]
+model = tf.keras.models.load_model('weight.hdf5')
+
+
+st.title("リアルタイム手話認識")
+multi_landmarks = [[]]
+
+uploaded_file = st.file_uploader("ファイルアップロード")
+
+if uploaded_file is not None:
+    uploaded_file = base_dir+uploaded_file.name
+    st.video(uploaded_file)
+    cap = cv2.VideoCapture(uploaded_file)
+    if (cap.isOpened() == False):
+        print("ビデオファイルを開くとエラーが発生しました")
+
+    pred = np.zeros(20)
+    while(cap.isOpened()):
+        ret, frame = cap.read()
+        if ret == True:
+            cv2.imshow("Video", frame)
+
+            # フレームにmediapipeを適用する
+            annotated_image, multi_landmarks = landmark(
+                frame, multi_landmarks)
+            # st.image(annotated_image)
+
+            if cv2.waitKey(25) & 0xFF == ord('q'):
+                break
+        else:
+            break
+    cap.release()
+    cv2.destroyAllWindows()
 
     # multi_landmarksの末尾60フレームで識別する
     if len(multi_landmarks) > 60:
@@ -91,35 +124,5 @@ def landmark(image, pred):
         array_landmark = np.nan_to_num(array_landmark, nan=0.1)
 
         pred = model.predict(array_landmark[None, ...])
-
-        # print("###################")
-        # print("sign"+str(pred.argmax()+1) + "である確率は" +
-        #       str(int(pred.max()*100))+"％")
-        # print("###################")
-
-    return annotated_image, pred
-
-
-class VideoProcessor:
-    def __init__(self):
-        self.pred = np.zeros(20)
-
-    def recv(self, frame):
-        img = frame.to_ndarray(format="bgr24")
-        img, self.pred = landmark(img, self.pred)  # mediapipeでのランドマーク検出
-
-        return av.VideoFrame.from_ndarray(img, format="bgr24")
-
-
-st.title("リアルタイム手話認識")
-multi_landmarks = [[]]
-model = tf.keras.models.load_model('LSTM.hdf5')
-
-ctx = webrtc_streamer(key="example", video_processor_factory=VideoProcessor)
-
-# frame=videoprocessorしてみる？
-if ctx.video_processor:
-    prediction = ctx.video_processor.pred
-    st.write("sign"+str(prediction.argmax()+1) +
-             "である確率は"+str(int(prediction.max()*100))+"％")
-    time.sleep(2)
+    st.write("sign"+str(pred.argmax()+1) +
+             "である確率は" + str(int(pred.max()*100))+"％")
