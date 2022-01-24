@@ -82,21 +82,29 @@ def landmark(image, multi_landmarks):
     return annotated_image, multi_landmarks
 
 
+def images2movie(images):
+    height, width = images[0].shape[:2]
+    fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
+    video = cv2.VideoWriter('ImgVideo.mp4', fourcc, 20.0, (height, width))
+
+    for img in images:
+        video.write(img)
+    return video
+
+
 base_dir = "/Users/shu/Desktop/"
-
-#multi_landmarks = [[]]
 model = tf.keras.models.load_model('weight.hdf5')
-
+multi_landmarks = [[]]
+landmark_images = []
 
 st.title("リアルタイム手話認識")
-multi_landmarks = [[]]
-
 uploaded_file = st.file_uploader("ファイルアップロード")
 
 if uploaded_file is not None:
     uploaded_file = base_dir+uploaded_file.name
     st.video(uploaded_file)
     cap = cv2.VideoCapture(uploaded_file)
+
     if (cap.isOpened() == False):
         print("ビデオファイルを開くとエラーが発生しました")
 
@@ -109,14 +117,21 @@ if uploaded_file is not None:
             # フレームにmediapipeを適用する
             annotated_image, multi_landmarks = landmark(
                 frame, multi_landmarks)
-            # st.image(annotated_image)
+
+            landmark_images.append(annotated_image)
 
             if cv2.waitKey(25) & 0xFF == ord('q'):
                 break
         else:
             break
+
     cap.release()
     cv2.destroyAllWindows()
+
+    # TODO:streamlit上で画像から動画を作成する
+    # # annotated_imageを動画にする
+    # landmark_vides = images2movie(landmark_images)
+    # st.video(data=landmark_vides, format="TIFF")
 
     # multi_landmarksの末尾60フレームで識別する
     if len(multi_landmarks) > 60:
